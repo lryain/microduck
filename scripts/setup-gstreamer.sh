@@ -486,7 +486,7 @@ install_plugins() {
     # base="https://github.com/${PLUGINS_REPO}/releases/download/${PLUGINS_VERSION}"
     name="microduck-gst-plugins-v3-aarch64"
     base="https://gitee.com/duinopeak/libs/raw/master/libs/microduck"
-"
+
     tmp="$(mktemp -d)"
 
     say "fetching ${name}"
