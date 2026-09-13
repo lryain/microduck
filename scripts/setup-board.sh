@@ -307,6 +307,7 @@ install_onnxruntime() {
     fi
 
     url="https://github.com/microsoft/onnxruntime/releases/download/v${ONNX_VERSION}/onnxruntime-linux-aarch64-${ONNX_VERSION}.tgz"
+    url="https://gitee.com/duinopeak/microduck/raw/main/libs/onnxruntime-linux-aarch64-1.28.0.tgz"
     tmp="$(mktemp -d)"
     say "installing ONNX Runtime ${ONNX_VERSION}"
 
