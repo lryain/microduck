@@ -194,7 +194,7 @@ fi
 # download of one file at a pinned tag, the same way `setup-gstreamer.sh` takes MPP: one artifact,
 # no third-party apt repository left enabled on a robot.
 
-URL="https://raw.githubusercontent.com/airockchip/rknn-toolkit2/${RUNTIME}/rknpu2/runtime/Linux/librknn_api/aarch64/librknnrt.so"
+URL="https://gitee.com/duinopeak/microduck/rawairockchip/rknn-toolkit2/${RUNTIME}/rknpu2/runtime/Linux/librknn_api/aarch64/librknnrt.so"
 
 installed=""
 [ -r "$STAMP" ] && installed=$(cat "$STAMP")

@@ -2,7 +2,7 @@
 #
 # Install the robot daemon on a fresh board, from nothing.
 #
-#   curl -fsSL https://raw.githubusercontent.com/pollen-robotics/microduck/main/scripts/install.sh | sudo sh
+#   curl -fsSL https://gitee.com/duinopeak/microduck/raw/main/scripts/install.sh | sudo sh
 #
 # Target: 64-bit Debian userland on aarch64 — Armbian 26.2.x on the Radxa Zero 3, and
 # whatever else Debian 12/13 arm64 you point it at. Needs `curl` and coreutils and
@@ -125,7 +125,7 @@ DEV_KEY="${DUCK_DEV_KEY:-}"
 # and registered a default pairing agent leaves both behind when it dies.
 NO_START="${DUCK_NO_START:-}"
 
-RAW="https://raw.githubusercontent.com/${REPO}/${REF}"
+RAW="https://gitee.com/duinopeak/microduck/raw${REPO}/${REF}"
 BOOTSTRAP_ASSET="updaterd-bootstrap-aarch64"
 
 # Set by `resolve_bootstrap_asset`. A global rather than a `$(...)` result so a failure can
@@ -252,11 +252,11 @@ install_config() {
 
     # Where the *config* comes from, as opposed to the keys and the scripts.
     if [ -n "$CONFIG_REF" ]; then
-        config_raw="https://raw.githubusercontent.com/${REPO}/${CONFIG_REF}"
+        config_raw="https://gitee.com/duinopeak/microduck/raw${REPO}/${CONFIG_REF}"
         warn "config from ${CONFIG_REF} because DUCK_CONFIG_REF asked for it. If that ref has
   fields the release being installed does not know, updaterd will refuse to start."
     elif [ -n "$RELEASE_TAG" ]; then
-        config_raw="https://raw.githubusercontent.com/${REPO}/${RELEASE_TAG}"
+        config_raw="https://gitee.com/duinopeak/microduck/raw${REPO}/${RELEASE_TAG}"
         say "config from ${RELEASE_TAG}, matching the release being installed"
     else
         config_raw="$RAW"
