@@ -443,7 +443,10 @@ EOF
 # plugins in the release were *built* against; see the release MANIFEST.
 MPP_VERSION="${MPP_VERSION:-1.5.0-1}"
 RGA_VERSION="${RGA_VERSION:-2.2.0-1}"
-RADXA_POOL="${RADXA_POOL:-https://radxa-repo.github.io/bullseye/pool/main}"
+#https://radxa-repo.github.io/bullseye/pool/main/m/mpp/librockchip-mpp1_1.5.0-1_arm64.deb
+#https://radxa-repo.github.io/bullseye/pool/main/libr/librga/librga2_2.2.0-1_arm64.deb
+# RADXA_POOL="${RADXA_POOL:-https://radxa-repo.github.io/bullseye/pool/main}"
+RADXA_POOL=https://gitee.com/duinopeak/libs/raw/master/libs/microduck
 
 install_rockchip_userspace() {
     dpkg -s librockchip-mpp1 >/dev/null 2>&1 \
@@ -453,8 +456,10 @@ install_rockchip_userspace() {
     say "fetching Rockchip MPP ${MPP_VERSION} and RGA ${RGA_VERSION} (not in Debian)"
     ok=1
     for path in \
-        "m/mpp/librockchip-mpp1_${MPP_VERSION}_arm64.deb" \
-        "libr/librga/librga2_${RGA_VERSION}_arm64.deb"
+        # "m/mpp/librockchip-mpp1_${MPP_VERSION}_arm64.deb" \
+        # "libr/librga/librga2_${RGA_VERSION}_arm64.deb"
+        "librockchip-mpp1_${MPP_VERSION}_arm64.deb" \
+        "librga2_${RGA_VERSION}_arm64.deb"
     do
         curl -fsSL -o "${tmp}/$(basename "$path")" "${RADXA_POOL}/${path}" || ok=0
     done
