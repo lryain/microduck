@@ -85,9 +85,10 @@ SELF=/usr/local/sbin/robot-setup-board
 # Where the sibling scripts come from, for the commands this prints. Same override names as
 # `install.sh`, so a fork or a pinned tag is one decision for the whole bring-up rather than
 # per script. Nothing here is fetched by this script — see `fetch_cmd`.
-REPO="${DUCK_REPO:-pollen-robotics/microduck}"
+# REPO="${DUCK_REPO:-pollen-robotics/microduck}"
+REPO="${DUCK_REPO:-microduck}"
 REF="${DUCK_REF:-main}"
-RAW="https://gitee.com/duinopeak/microduck/raw/${REF}/scripts"
+RAW="https://gitee.com/duinopeak/${REPO}/raw/${REF}/scripts"
 
 # For a private repository: a token with read access to contents. Only ever interpolated into
 # the commands this prints, and by name (`$DUCK_TOKEN`) rather than by value — a bring-up log

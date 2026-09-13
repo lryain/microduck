@@ -27,7 +27,7 @@ robot_socket = "/run/robotd.sock"
 # would let anything a teammate builds install itself; `allow_fault_injection` would let the
 # updater be told to fail on purpose. Developer boards override these locally — they are not
 # overridden by an update, because updates do not touch /etc.
-allow_dev_keys        = false
+allow_dev_keys        = true
 allow_fault_injection = false
 
 # What makes `min_supported` mean anything. Without a poll a robot only learns a floor

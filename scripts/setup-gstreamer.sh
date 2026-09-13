@@ -63,7 +63,7 @@ GST_EXTRA_PLUGIN_DIR=/usr/local/lib/gstreamer-1.0
 # is the robot's own userland — and published at:
 #
 #   https://github.com/pollen-robotics/microduck-gst-plugins
-#
+#   https://gitee.com/duinopeak/libs/raw/master/libs/microduck/microduck-gst-plugins-v3-aarch64.tar.gz
 # **A pinned version, never "latest".** Two provisioning runs a day apart that produce different
 # plugins, with nothing recording which, is an unreproducible media bug waiting to happen. This is
 # the same lesson `ONNX_VERSION` in `setup-board.sh` carries, and an xtask test asserts this
@@ -72,7 +72,8 @@ GST_EXTRA_PLUGIN_DIR=/usr/local/lib/gstreamer-1.0
 #
 # The repository is public on purpose: the download happens during provisioning and, later, from
 # the updater's preinstall hook, which runs with a cleared environment and no token.
-PLUGINS_REPO="${PLUGINS_REPO:-pollen-robotics/microduck-gst-plugins}"
+# PLUGINS_REPO="${PLUGINS_REPO:-pollen-robotics/microduck-gst-plugins}"
+PLUGINS_REPO="${PLUGINS_REPO:-microduck-gst-plugins}"
 PLUGINS_VERSION="${PLUGINS_VERSION:-v3}"
 
 # What the encoder probe looks at. Variables rather than literals for the reason
@@ -481,8 +482,11 @@ install_plugins() {
         return 0
     fi
 
-    name="microduck-gst-plugins-${PLUGINS_VERSION}-aarch64"
-    base="https://github.com/${PLUGINS_REPO}/releases/download/${PLUGINS_VERSION}"
+    # name="microduck-gst-plugins-${PLUGINS_VERSION}-aarch64"
+    # base="https://github.com/${PLUGINS_REPO}/releases/download/${PLUGINS_VERSION}"
+    name="microduck-gst-plugins-v3-aarch64"
+    base="https://gitee.com/duinopeak/libs/raw/master/libs/microduck"
+"
     tmp="$(mktemp -d)"
 
     say "fetching ${name}"

@@ -70,9 +70,10 @@ ENV_WEIRD_BLE="${DUCK_WEIRD_BLE:-}"
 ENV_GSTREAMER="${DUCK_GSTREAMER:-}"
 ENV_RKAIQ="${DUCK_RKAIQ:-}"
 
-REPO="${ENV_REPO:-pollen-robotics/microduck}"
+# REPO="${ENV_REPO:-pollen-robotics/microduck}"
+REPO="${ENV_REPO:-microduck}"
 REF="${ENV_REF:-main}"
-RAW="https://gitee.com/duinopeak/microduck/raw/${REF}/scripts"
+RAW="https://gitee.com/duinopeak/${REPO}/raw/${REF}/scripts"
 
 # For a private repository: a token with read access to contents. Carried across the reboot in
 # the state file rather than asked for twice — see `save_state` for why not `~/.profile`.

@@ -20,7 +20,8 @@ NAME="${1:-}"
 [ -n "$NAME" ] || { echo "usage: $0 <directory under spaces/> [--space id] [--dry-run]" >&2; exit 2; }
 shift
 
-SPACE="pollen-robotics/microduck-$NAME"
+# SPACE="pollen-robotics/microduck-$NAME"
+SPACE="microduck-$NAME"
 DRY_RUN=
 
 while [ $# -gt 0 ]; do

@@ -49,7 +49,8 @@ set -eu
 # ── knobs ────────────────────────────────────────────────────────────────────
 
 # The repository releases are published from. Override for a fork or a test repo.
-REPO="${DUCK_REPO:-pollen-robotics/microduck}"
+# REPO="${DUCK_REPO:-pollen-robotics/microduck}"
+REPO="${DUCK_REPO:-microduck}"
 
 # Branch the trusted keys are read from. Pin to a tag for a reproducible provisioning run.
 #
@@ -125,7 +126,8 @@ DEV_KEY="${DUCK_DEV_KEY:-}"
 # and registered a default pairing agent leaves both behind when it dies.
 NO_START="${DUCK_NO_START:-}"
 
-RAW="https://gitee.com/duinopeak/microduck/raw${REPO}/${REF}"
+# RAW="https://gitee.com/duinopeak/microduck/raw/${REPO}/${REF}"
+RAW="https://gitee.com/duinopeak/${REPO}/raw/${REF}"
 BOOTSTRAP_ASSET="updaterd-bootstrap-aarch64"
 
 # Set by `resolve_bootstrap_asset`. A global rather than a `$(...)` result so a failure can
@@ -252,11 +254,11 @@ install_config() {
 
     # Where the *config* comes from, as opposed to the keys and the scripts.
     if [ -n "$CONFIG_REF" ]; then
-        config_raw="https://gitee.com/duinopeak/microduck/raw${REPO}/${CONFIG_REF}"
+        config_raw="https://gitee.com/duinopeak/microduck/raw/${REPO}/${CONFIG_REF}"
         warn "config from ${CONFIG_REF} because DUCK_CONFIG_REF asked for it. If that ref has
   fields the release being installed does not know, updaterd will refuse to start."
     elif [ -n "$RELEASE_TAG" ]; then
-        config_raw="https://gitee.com/duinopeak/microduck/raw${REPO}/${RELEASE_TAG}"
+        config_raw="https://gitee.com/duinopeak/microduck/raw/${REPO}/${RELEASE_TAG}"
         say "config from ${RELEASE_TAG}, matching the release being installed"
     else
         config_raw="$RAW"

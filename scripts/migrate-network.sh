@@ -46,9 +46,10 @@ SELF=/usr/local/sbin/robot-migrate-network
 
 # Where this script came from, for the commands it prints. Same override names as install.sh
 # and setup-board.sh, so a fork or a pinned tag is one decision for the whole bring-up.
-REPO="${DUCK_REPO:-pollen-robotics/microduck}"
+# REPO="${DUCK_REPO:-pollen-robotics/microduck}"
+REPO="${DUCK_REPO:-microduck}"
 REF="${DUCK_REF:-main}"
-RAW="https://gitee.com/duinopeak/microduck/raw/${REF}/scripts"
+RAW="https://gitee.com/duinopeak/${REPO}/raw/${REF}/scripts"
 # For a private repository. Only ever interpolated into printed commands, and by name rather
 # than by value: a bring-up log gets pasted into chat.
 TOKEN="${DUCK_TOKEN:-}"

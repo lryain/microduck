@@ -22,7 +22,8 @@
 
 set -euo pipefail
 
-SPACE="pollen-robotics/microduck-console"
+# SPACE="pollen-robotics/microduck-console"
+SPACE="microduck-console"
 DRY_RUN=
 
 while [ $# -gt 0 ]; do
