@@ -87,7 +87,7 @@ SELF=/usr/local/sbin/robot-setup-board
 # per script. Nothing here is fetched by this script — see `fetch_cmd`.
 REPO="${DUCK_REPO:-pollen-robotics/microduck}"
 REF="${DUCK_REF:-main}"
-RAW="https://gitee.com/duinopeak/microduck/raw${REPO}/${REF}/scripts"
+RAW="https://gitee.com/duinopeak/microduck/raw/${REF}/scripts"
 
 # For a private repository: a token with read access to contents. Only ever interpolated into
 # the commands this prints, and by name (`$DUCK_TOKEN`) rather than by value — a bring-up log

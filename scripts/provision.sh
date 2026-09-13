@@ -72,7 +72,7 @@ ENV_RKAIQ="${DUCK_RKAIQ:-}"
 
 REPO="${ENV_REPO:-pollen-robotics/microduck}"
 REF="${ENV_REF:-main}"
-RAW="https://gitee.com/duinopeak/microduck/raw${REPO}/${REF}/scripts"
+RAW="https://gitee.com/duinopeak/microduck/raw/${REF}/scripts"
 
 # For a private repository: a token with read access to contents. Carried across the reboot in
 # the state file rather than asked for twice — see `save_state` for why not `~/.profile`.
@@ -303,7 +303,7 @@ load_state() {
     # kept somewhere else to still win. Nothing else writes `PROVISION_NAME`, so a `--name` on the
     # phase 2 command line survives the sourcing and can simply be preferred.
     NAME="${NAME:-${PROVISION_NAME:-}}"
-    RAW="https://gitee.com/duinopeak/microduck/raw${REPO}/${REF}/scripts"
+    RAW="https://gitee.com/duinopeak/microduck/raw/${REF}/scripts"
     return 0
 }
 
