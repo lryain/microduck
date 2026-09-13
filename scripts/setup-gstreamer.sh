@@ -394,10 +394,10 @@ EOF
   librockchip-mpp1 and librga2 are not in Debian; this script installs the plugins, and MPP's
   own test binary proves the hardware with no GStreamer involved at all:
 
-    R=https://radxa-repo.github.io/bullseye/pool/main
-    curl -sL -O \$R/m/mpp/librockchip-mpp1_1.5.0-1_arm64.deb
-    curl -sL -O \$R/m/mpp/librockchip-vpu0_1.5.0-1_arm64.deb
-    curl -sL -O \$R/m/mpp/rockchip-mpp-demos_1.5.0-1_arm64.deb
+    R=https://gitee.com/duinopeak/libs/raw/master/libs/microduck
+    curl -sL -O \$R/librockchip-mpp1_1.5.0-1_arm64.deb
+    curl -sL -O \$R/librockchip-vpu0_1.5.0-1_arm64.deb
+    curl -sL -O \$R/rockchip-mpp-demos_1.5.0-1_arm64.deb
     sudo dpkg -i librockchip-mpp1_1.5.0-1_arm64.deb librockchip-vpu0_1.5.0-1_arm64.deb \\
       rockchip-mpp-demos_1.5.0-1_arm64.deb
     sudo mpi_enc_test -w 1280 -h 720 -t 7 -n 60 -o /tmp/out.h264
@@ -445,6 +445,7 @@ MPP_VERSION="${MPP_VERSION:-1.5.0-1}"
 RGA_VERSION="${RGA_VERSION:-2.2.0-1}"
 #https://radxa-repo.github.io/bullseye/pool/main/m/mpp/librockchip-mpp1_1.5.0-1_arm64.deb
 #https://radxa-repo.github.io/bullseye/pool/main/libr/librga/librga2_2.2.0-1_arm64.deb
+#https://radxa-repo.github.io/bullseye/pool/main/m/mpp/rockchip-mpp-demos_1.5.0-1_arm64.deb
 # RADXA_POOL="${RADXA_POOL:-https://radxa-repo.github.io/bullseye/pool/main}"
 RADXA_POOL=https://gitee.com/duinopeak/libs/raw/master/libs/microduck
 
