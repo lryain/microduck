@@ -446,11 +446,9 @@ RGA_VERSION="${RGA_VERSION:-2.2.0-1}"
 #https://radxa-repo.github.io/bullseye/pool/main/m/mpp/librockchip-mpp1_1.5.0-1_arm64.deb
 #https://radxa-repo.github.io/bullseye/pool/main/libr/librga/librga2_2.2.0-1_arm64.deb
 #https://radxa-repo.github.io/bullseye/pool/main/m/mpp/rockchip-mpp-demos_1.5.0-1_arm64.deb
-# RADXA_POOL="${RADXA_POOL:-https://radxa-repo.github.io/bullseye/pool/main}"
+#RADXA_POOL="${RADXA_POOL:-https://radxa-repo.github.io/bullseye/pool/main}"
 RADXA_POOL=https://gitee.com/duinopeak/libs/raw/master/libs/microduck
 
-# "m/mpp/librockchip-mpp1_${MPP_VERSION}_arm64.deb" \
-# "libr/librga/librga2_${RGA_VERSION}_arm64.deb"
 install_rockchip_userspace() {
     dpkg -s librockchip-mpp1 >/dev/null 2>&1 \
         && dpkg -s librga2 >/dev/null 2>&1 && return 0
