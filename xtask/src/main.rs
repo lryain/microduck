@@ -2032,6 +2032,20 @@ mod tests {
         }
     }
 
+    #[test]
+    fn the_rkaiq_shim_survives_the_installed_copy() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("xtask/ has a parent");
+
+        let script = std::fs::read_to_string(root.join("scripts/setup-rkaiq.sh")).unwrap();
+        assert!(
+            script.contains("/usr/local/sbin/rkaiq-modinfo-shim.c")
+                || script.contains("install -m 644 \"$SHIM_SRC\" /usr/local/sbin/rkaiq-modinfo-shim.c"),
+            "setup-rkaiq.sh must leave the shim beside the installed copy at /usr/local/sbin, not just in /usr/local/lib"
+        );
+    }
+
     /// `setup-npu.sh` compiles a device-tree overlay from a .dts beside it, so the .dts has to be
     /// packaged too.
     ///

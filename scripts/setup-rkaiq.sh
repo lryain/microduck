@@ -304,9 +304,14 @@ systemctl daemon-reload
 systemctl enable rkaiq_3A >/dev/null 2>&1 || warn "could not enable rkaiq_3A"
 
 # Leave a copy for the next person, exactly as setup-gstreamer.sh does.
+#
+# The installed script later runs from /usr/local/sbin, and the code above checks for a C file
+# next to the script itself. That means the source must remain adjacent to the installed copy,
+# not only in /usr/local/lib, or a rebooted board reruns with the script but without its shim.
 if [ "$(cd "$(dirname "$0")" && pwd)/$(basename "$0")" != "$SELF" ]; then
     mkdir -p /usr/local/sbin
     install -m 755 "$0" "$SELF"
+    install -m 644 "$SHIM_SRC" /usr/local/sbin/rkaiq-modinfo-shim.c
     install -m 644 "$SHIM_SRC" /usr/local/lib/rkaiq-modinfo-shim.c
 fi
 
