@@ -449,6 +449,8 @@ RGA_VERSION="${RGA_VERSION:-2.2.0-1}"
 # RADXA_POOL="${RADXA_POOL:-https://radxa-repo.github.io/bullseye/pool/main}"
 RADXA_POOL=https://gitee.com/duinopeak/libs/raw/master/libs/microduck
 
+# "m/mpp/librockchip-mpp1_${MPP_VERSION}_arm64.deb" \
+# "libr/librga/librga2_${RGA_VERSION}_arm64.deb"
 install_rockchip_userspace() {
     dpkg -s librockchip-mpp1 >/dev/null 2>&1 \
         && dpkg -s librga2 >/dev/null 2>&1 && return 0
@@ -457,8 +459,6 @@ install_rockchip_userspace() {
     say "fetching Rockchip MPP ${MPP_VERSION} and RGA ${RGA_VERSION} (not in Debian)"
     ok=1
     for path in \
-        # "m/mpp/librockchip-mpp1_${MPP_VERSION}_arm64.deb" \
-        # "libr/librga/librga2_${RGA_VERSION}_arm64.deb"
         "librockchip-mpp1_${MPP_VERSION}_arm64.deb" \
         "librga2_${RGA_VERSION}_arm64.deb"
     do
