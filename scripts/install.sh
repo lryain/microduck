@@ -327,7 +327,7 @@ resolve_bootstrap_asset() {
     # different "latest" releases if one is published mid-install.
     [ -z "$BOOTSTRAP_URL" ] || return 0
 
-    api="https://api.github.com/repos/${REPO}/releases/latest"
+    api="https://api.github.com/repos/lryain/${REPO}/releases/latest"
     json="$(mktemp)"
 
     if ! fetch "$api" "$json"; then
