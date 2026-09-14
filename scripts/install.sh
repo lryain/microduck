@@ -166,15 +166,16 @@ KEYS="release-1.pub release-2.pub release-3.pub"
 #   sudo -E env DUCK_PROXY=http://192.168.1.10:7890 sh install.sh
 #   sudo -E env http_proxy=http://192.168.1.10:7890 https_proxy=http://192.168.1.10:7890 sh install.sh
 DUCK_PROXY="${DUCK_PROXY:-${http_proxy:-${https_proxy:-}}}"
-if [ -n "${DUCK_PROXY:-}" ]; then
-    say "DUCK_PROXY is set: all curl downloads in this installer will use the configured proxy"
-fi
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33mwarning:\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+
+if [ -n "${DUCK_PROXY:-}" ]; then
+    say "DUCK_PROXY is set: all curl downloads in this installer will use the configured proxy"
+fi
 
 curl_proxy_args() {
     if [ -n "${DUCK_PROXY:-}" ]; then
