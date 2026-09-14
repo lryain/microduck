@@ -698,6 +698,10 @@ _env="DUCK_TOKEN='${DUCK_TOKEN:-}'"
 [ -z "$PAUSE_BTD" ]  || _env="${_env} DUCK_PAUSE_BTD=1"
 [ -z "$NO_GSTREAMER" ] || _env="${_env} DUCK_GSTREAMER=0"
 [ -z "$NO_RKAIQ" ]     || _env="${_env} DUCK_RKAIQ=0"
+if [ -n "${DUCK_PROXY:-}" ]; then
+    say "DUCK_PROXY is set: all board-side fetches will use the configured proxy"
+    _env="${_env} DUCK_PROXY='${DUCK_PROXY}'"
+fi
 
 # The name is a flag rather than one more `DUCK_*`, because on the board it goes no further than
 # `robotctl system set-name`. Single-quoted with any quote of its own escaped: a name is free text,

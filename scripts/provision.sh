@@ -64,6 +64,7 @@ set -eu
 ENV_REPO="${DUCK_REPO:-}"
 ENV_REF="${DUCK_REF:-}"
 ENV_TOKEN="${DUCK_TOKEN:-}"
+ENV_PROXY="${DUCK_PROXY:-}"
 ENV_DEV_KEY="${DUCK_DEV_KEY:-}"
 ENV_FORCE="${DUCK_FORCE_REINSTALL:-}"
 ENV_WEIRD_BLE="${DUCK_WEIRD_BLE:-}"
@@ -84,6 +85,10 @@ RAW="https://gitee.com/duinopeak/${REPO}/raw/${REF}/scripts"
 # so passing it through in phase 2 is what makes updates work after provisioning, not just
 # during it. `finish` says where it ended up.
 TOKEN="$ENV_TOKEN"
+PROXY="${ENV_PROXY:-${http_proxy:-${https_proxy:-}}}"
+if [ -n "$PROXY" ]; then
+    say "DUCK_PROXY is set: board-side download steps will use the configured proxy"
+fi
 
 # A name for this robot, or empty to let it name itself. Set by `--name`; see `main`.
 #
@@ -610,8 +615,9 @@ phase_two() {
     DUCK_REPO="$REPO"
     DUCK_REF="$REF"
     DUCK_TOKEN="$TOKEN"
+    DUCK_PROXY="$PROXY"
     DUCK_FORCE_REINSTALL="$FORCE_REINSTALL"
-    export DUCK_REPO DUCK_REF DUCK_TOKEN DUCK_FORCE_REINSTALL
+    export DUCK_REPO DUCK_REF DUCK_TOKEN DUCK_PROXY DUCK_FORCE_REINSTALL
     if [ -n "$DEV_KEY" ]; then
         DUCK_DEV_KEY="$DEV_KEY"
         export DUCK_DEV_KEY

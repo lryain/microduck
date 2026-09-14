@@ -159,18 +159,38 @@ UNIT_DIR=/etc/systemd/system
 # key rotation possible without re-flashing by hand.
 KEYS="release-1.pub release-2.pub release-3.pub"
 
+# Optional proxy used by the bootstrap and release downloads. Set either the env vars or this
+# value before the installer runs, and it applies to every `curl` call in this script.
+#
+# Example:
+#   sudo -E env DUCK_PROXY=http://192.168.1.10:7890 sh install.sh
+#   sudo -E env http_proxy=http://192.168.1.10:7890 https_proxy=http://192.168.1.10:7890 sh install.sh
+DUCK_PROXY="${DUCK_PROXY:-${http_proxy:-${https_proxy:-}}}"
+if [ -n "${DUCK_PROXY:-}" ]; then
+    say "DUCK_PROXY is set: all curl downloads in this installer will use the configured proxy"
+fi
+
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33mwarning:\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
+curl_proxy_args() {
+    if [ -n "${DUCK_PROXY:-}" ]; then
+        printf -- '--proxy %s' "${DUCK_PROXY}"
+    fi
+}
+
 fetch() {
     # $1 url, $2 destination
+    proxy_args="$(curl_proxy_args)"
     if [ -n "$TOKEN" ]; then
-        curl -fsSL -H "Authorization: Bearer ${TOKEN}" -o "$2" "$1"
+        # shellcheck disable=SC2086 # intentionally unquoted so proxy args expand correctly.
+        curl -fsSL ${proxy_args} -H "Authorization: Bearer ${TOKEN}" -o "$2" "$1"
     else
-        curl -fsSL -o "$2" "$1"
+        # shellcheck disable=SC2086 # intentionally unquoted so proxy args expand correctly.
+        curl -fsSL ${proxy_args} -o "$2" "$1"
     fi
 }
 
@@ -180,11 +200,14 @@ fetch() {
 # description, which downloads perfectly and is not a binary.
 fetch_asset() {
     # $1 url, $2 destination
+    proxy_args="$(curl_proxy_args)"
     if [ -n "$TOKEN" ]; then
-        curl -fsSL -H "Authorization: Bearer ${TOKEN}" \
+        # shellcheck disable=SC2086 # intentionally unquoted so proxy args expand correctly.
+        curl -fsSL ${proxy_args} -H "Authorization: Bearer ${TOKEN}" \
             -H "Accept: application/octet-stream" -o "$2" "$1"
     else
-        curl -fsSL -H "Accept: application/octet-stream" -o "$2" "$1"
+        # shellcheck disable=SC2086 # intentionally unquoted so proxy args expand correctly.
+        curl -fsSL ${proxy_args} -H "Accept: application/octet-stream" -o "$2" "$1"
     fi
 }
 
