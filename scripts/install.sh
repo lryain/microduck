@@ -263,11 +263,11 @@ install_config() {
 
     # Where the *config* comes from, as opposed to the keys and the scripts.
     if [ -n "$CONFIG_REF" ]; then
-        config_raw="https://gitee.com/duinopeak/microduck/raw/${REPO}/${CONFIG_REF}"
+        config_raw="https://gitee.com/duinopeak/${REPO}/raw/${CONFIG_REF}"
         warn "config from ${CONFIG_REF} because DUCK_CONFIG_REF asked for it. If that ref has
   fields the release being installed does not know, updaterd will refuse to start."
     elif [ -n "$RELEASE_TAG" ]; then
-        config_raw="https://gitee.com/duinopeak/microduck/raw/${REPO}/${RELEASE_TAG}"
+        config_raw="https://gitee.com/duinopeak/${REPO}/raw/${RELEASE_TAG}"
         say "config from ${RELEASE_TAG}, matching the release being installed"
     else
         config_raw="$RAW"
