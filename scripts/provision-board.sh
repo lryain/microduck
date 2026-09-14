@@ -702,6 +702,10 @@ if [ -n "${DUCK_PROXY:-}" ]; then
     say "DUCK_PROXY is set: all board-side fetches will use the configured proxy"
     _env="${_env} DUCK_PROXY='${DUCK_PROXY}'"
 fi
+if [ -n "${DUCK_SKIP_FETCH_LATEST:-}" ] || [ -n "${DUCK_USE_CACHED:-}" ]; then
+    say "DUCK_SKIP_FETCH_LATEST is set: reusing the cached bootstrap updaterd instead of fetching the latest release"
+    _env="${_env} DUCK_SKIP_FETCH_LATEST='${DUCK_SKIP_FETCH_LATEST:-${DUCK_USE_CACHED}}'"
+fi
 
 # The name is a flag rather than one more `DUCK_*`, because on the board it goes no further than
 # `robotctl system set-name`. Single-quoted with any quote of its own escaped: a name is free text,

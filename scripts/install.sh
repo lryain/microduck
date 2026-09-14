@@ -167,6 +167,11 @@ KEYS="release-1.pub release-2.pub release-3.pub"
 #   sudo -E env http_proxy=http://192.168.1.10:7890 https_proxy=http://192.168.1.10:7890 sh install.sh
 DUCK_PROXY="${DUCK_PROXY:-${http_proxy:-${https_proxy:-}}}"
 
+# Skip the GitHub "latest" fetch entirely and reuse the cached current updaterd already on disk.
+# This is the "no network fetch, keep the last known-good bootstrap" mode for boards that have
+# already been provisioned or are intentionally offline.
+DUCK_SKIP_FETCH_LATEST="${DUCK_SKIP_FETCH_LATEST:-${DUCK_USE_CACHED:-0}}"
+
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
@@ -175,6 +180,9 @@ die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
 if [ -n "${DUCK_PROXY:-}" ]; then
     say "DUCK_PROXY is set: all curl downloads in this installer will use the configured proxy"
+fi
+if [ "${DUCK_SKIP_FETCH_LATEST:-0}" = "1" ] || [ "${DUCK_SKIP_FETCH_LATEST:-0}" = "true" ] || [ "${DUCK_SKIP_FETCH_LATEST:-0}" = "yes" ]; then
+    say "DUCK_SKIP_FETCH_LATEST is set: reusing the cached bootstrap updaterd instead of fetching the latest release"
 fi
 
 curl_proxy_args() {
@@ -321,6 +329,10 @@ install_config() {
     # surprise nobody wants twice.
     if [ -f "${CONFIG_DIR}/updater.toml" ]; then
         warn "keeping the existing ${CONFIG_DIR}/updater.toml"
+        if grep -Eq 'repo[[:space:]]*=[[:space:]]*"(ORG/duck-daemon|microduck|lryain/microduck)"' "${CONFIG_DIR}/updater.toml"; then
+            warn "normalizing the daemon repo in ${CONFIG_DIR}/updater.toml to ${LRYAIN_REPO}"
+            sed -i "s|repo[[:space:]]*=.*|repo           = \"${LRYAIN_REPO}\"|" "${CONFIG_DIR}/updater.toml"
+        fi
     else
         fetch "${config_raw}/deploy/updater.toml" "${CONFIG_DIR}/updater.toml"
         sed -i "s|\"ORG/duck-daemon\"|\"${LRYAIN_REPO}\"|" "${CONFIG_DIR}/updater.toml"
@@ -374,6 +386,18 @@ resolve_bootstrap_asset() {
         BOOTSTRAP_URL="$bootstrap_bin"
         RELEASE_TAG="${RELEASE_TAG:-local-dist}"
         return 0
+    fi
+
+    if [ "${DUCK_SKIP_FETCH_LATEST:-0}" = "1" ] || [ "${DUCK_SKIP_FETCH_LATEST:-0}" = "true" ] || [ "${DUCK_SKIP_FETCH_LATEST:-0}" = "yes" ]; then
+        cached="${INSTALL_DIR}/current/bin/updaterd"
+        if [ -x "$cached" ]; then
+            BOOTSTRAP_URL="$cached"
+            if [ -z "$RELEASE_TAG" ] && [ -L "${INSTALL_DIR}/current" ]; then
+                RELEASE_TAG="$(readlink "${INSTALL_DIR}/current" | sed 's|.*/||')"
+            fi
+            return 0
+        fi
+        die "DUCK_SKIP_FETCH_LATEST is set but no cached bootstrap binary was found at ${cached}. Remove this flag or install a release first."
     fi
 
     api="https://api.github.com/repos/lryain/${REPO}/releases/latest"

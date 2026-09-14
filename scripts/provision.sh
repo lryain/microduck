@@ -65,6 +65,7 @@ ENV_REPO="${DUCK_REPO:-}"
 ENV_REF="${DUCK_REF:-}"
 ENV_TOKEN="${DUCK_TOKEN:-}"
 ENV_PROXY="${DUCK_PROXY:-}"
+ENV_SKIP_FETCH_LATEST="${DUCK_SKIP_FETCH_LATEST:-${DUCK_USE_CACHED:-}}"
 ENV_DEV_KEY="${DUCK_DEV_KEY:-}"
 ENV_FORCE="${DUCK_FORCE_REINSTALL:-}"
 ENV_WEIRD_BLE="${DUCK_WEIRD_BLE:-}"
@@ -86,6 +87,7 @@ RAW="https://gitee.com/duinopeak/${REPO}/raw/${REF}/scripts"
 # during it. `finish` says where it ended up.
 TOKEN="$ENV_TOKEN"
 PROXY="${ENV_PROXY:-${http_proxy:-${https_proxy:-}}}"
+SKIP_FETCH_LATEST="$ENV_SKIP_FETCH_LATEST"
 
 # A name for this robot, or empty to let it name itself. Set by `--name`; see `main`.
 #
@@ -617,8 +619,9 @@ phase_two() {
     DUCK_REF="$REF"
     DUCK_TOKEN="$TOKEN"
     DUCK_PROXY="$PROXY"
+    DUCK_SKIP_FETCH_LATEST="$SKIP_FETCH_LATEST"
     DUCK_FORCE_REINSTALL="$FORCE_REINSTALL"
-    export DUCK_REPO DUCK_REF DUCK_TOKEN DUCK_PROXY DUCK_FORCE_REINSTALL
+    export DUCK_REPO DUCK_REF DUCK_TOKEN DUCK_PROXY DUCK_SKIP_FETCH_LATEST DUCK_FORCE_REINSTALL
     if [ -n "$DEV_KEY" ]; then
         DUCK_DEV_KEY="$DEV_KEY"
         export DUCK_DEV_KEY
