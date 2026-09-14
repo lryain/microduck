@@ -51,6 +51,7 @@ set -eu
 # The repository releases are published from. Override for a fork or a test repo.
 # REPO="${DUCK_REPO:-pollen-robotics/microduck}"
 REPO="${DUCK_REPO:-microduck}"
+LRYAIN_REPO="${DUCK_LRYAIN_REPO:-lryain/microduck}"
 
 # Branch the trusted keys are read from. Pin to a tag for a reproducible provisioning run.
 #
@@ -298,7 +299,7 @@ install_config() {
         warn "keeping the existing ${CONFIG_DIR}/updater.toml"
     else
         fetch "${config_raw}/deploy/updater.toml" "${CONFIG_DIR}/updater.toml"
-        sed -i "s|\"ORG/duck-daemon\"|\"${REPO}\"|" "${CONFIG_DIR}/updater.toml"
+        sed -i "s|\"ORG/duck-daemon\"|\"${LRYAIN_REPO}\"|" "${CONFIG_DIR}/updater.toml"
         chmod 644 "${CONFIG_DIR}/updater.toml"
     fi
 
