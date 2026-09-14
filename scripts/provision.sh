@@ -71,7 +71,7 @@ ENV_GSTREAMER="${DUCK_GSTREAMER:-}"
 ENV_RKAIQ="${DUCK_RKAIQ:-}"
 
 # REPO="${ENV_REPO:-pollen-robotics/microduck}"
-REPO="${ENV_REPO:-lryain-microduck}"
+REPO="${ENV_REPO:-microduck}"
 REF="${ENV_REF:-main}"
 RAW="https://gitee.com/duinopeak/${REPO}/raw/${REF}/scripts"
 

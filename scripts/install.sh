@@ -372,7 +372,7 @@ resolve_bootstrap_asset() {
     )"
     rm -f "$json_compact"
 
-    BOOTSTRAP_URL="https://api.github.com/repos/${REPO}/releases/assets/${id}"
+    BOOTSTRAP_URL="https://api.github.com/repos/lryain/${REPO}/releases/assets/${id}"
 }
 
 # Stop the daemons so a forced re-install is operating on an inert board.
