@@ -86,9 +86,6 @@ RAW="https://gitee.com/duinopeak/${REPO}/raw/${REF}/scripts"
 # during it. `finish` says where it ended up.
 TOKEN="$ENV_TOKEN"
 PROXY="${ENV_PROXY:-${http_proxy:-${https_proxy:-}}}"
-if [ -n "$PROXY" ]; then
-    say "DUCK_PROXY is set: board-side download steps will use the configured proxy"
-fi
 
 # A name for this robot, or empty to let it name itself. Set by `--name`; see `main`.
 #
@@ -189,6 +186,10 @@ RKAIQ_SELF=/usr/local/sbin/robot-setup-rkaiq
 say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33mwarning:\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+
+if [ -n "$PROXY" ]; then
+    say "DUCK_PROXY is set: board-side download steps will use the configured proxy"
+fi
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
