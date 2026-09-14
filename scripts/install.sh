@@ -395,9 +395,10 @@ resolve_bootstrap_asset() {
             if [ -z "$RELEASE_TAG" ] && [ -L "${INSTALL_DIR}/current" ]; then
                 RELEASE_TAG="$(readlink "${INSTALL_DIR}/current" | sed 's|.*/||')"
             fi
+            warn "DUCK_SKIP_FETCH_LATEST is set and a cached bootstrap was found; using ${cached} instead of fetching the latest release"
             return 0
         fi
-        die "DUCK_SKIP_FETCH_LATEST is set but no cached bootstrap binary was found at ${cached}. Remove this flag or install a release first."
+        warn "DUCK_SKIP_FETCH_LATEST is set, but no cached bootstrap binary exists at ${cached}; falling back to the normal latest-release download"
     fi
 
     api="https://api.github.com/repos/lryain/${REPO}/releases/latest"
