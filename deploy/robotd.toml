@@ -21,6 +21,15 @@
 # `robotd --port`, which is the dev escape hatch rather than the thing to edit here.
 port = "/dev/ttyS2"
 
+[walking_imu]
+# Keep `dynamixel` during bring-up. `bno08x_i2c` uses a BNO085/BNO088 on the Zero 3W
+# I2C3 bus and is only safe to enable after checking the mounting axes and readiness.
+source = "bno08x_i2c"
+bus = "/dev/i2c-pihat"
+address = 0x4a
+hz = 100
+stale_after_ms = 100
+
 # Every value below that is commented out shows the built-in default. LEAVE IT COMMENTED
 # unless this robot genuinely needs a different value: install.sh copies this file to
 # /etc/robot/robotd.toml once and never overwrites it, so an uncommented value is frozen on
