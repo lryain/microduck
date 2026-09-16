@@ -13,7 +13,8 @@ target/
 *.pem
 secret*
 !*.pub
-
+hardware
+scripts/README.md
 # Release output. Contains artifacts and signatures; regenerate rather than commit.
 /dist
 /staged

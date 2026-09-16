@@ -74,14 +74,32 @@ pub fn user_agent() -> String {
     format!("updaterd/{}", env!("CARGO_PKG_VERSION"))
 }
 
+fn proxy_url() -> Option<String> {
+    std::env::var("DUCK_PROXY")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .or_else(|| std::env::var("http_proxy").ok().filter(|v| !v.trim().is_empty()))
+        .or_else(|| std::env::var("https_proxy").ok().filter(|v| !v.trim().is_empty()))
+}
+
 /// Build the shared client.
 pub fn client() -> Result<reqwest::Client, Error> {
-    reqwest::Client::builder()
+    let mut builder = reqwest::Client::builder();
+    builder = builder
         .user_agent(user_agent())
         .connect_timeout(CONNECT_TIMEOUT)
         // Redirects are followed, but not indefinitely: a redirect loop is a
         // misconfigured mirror, not something to chase.
-        .redirect(reqwest::redirect::Policy::limited(5))
+        .redirect(reqwest::redirect::Policy::limited(5));
+
+    if let Some(proxy) = proxy_url() {
+        builder = builder.proxy(
+            reqwest::Proxy::all(&proxy)
+                .map_err(|e| Error::Network(format!("invalid proxy URL {proxy}: {e}")))?,
+        );
+    }
+
+    builder
         .build()
         .map_err(|e| Error::Network(format!("could not build HTTP client: {e}")))
 }
@@ -414,5 +432,12 @@ mod tests {
         unsafe { std::env::set_var("GITHUB_TOKEN", "   ") };
         assert!(github_token().is_none());
         unsafe { std::env::remove_var("GITHUB_TOKEN") };
+    }
+
+    #[test]
+    fn duck_proxy_is_honored() {
+        unsafe { std::env::set_var("DUCK_PROXY", "http://192.168.3.97:7890") };
+        assert_eq!(proxy_url().as_deref(), Some("http://192.168.3.97:7890"));
+        unsafe { std::env::remove_var("DUCK_PROXY") };
     }
 }

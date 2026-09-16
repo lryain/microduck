@@ -2041,7 +2041,8 @@ mod tests {
         let script = std::fs::read_to_string(root.join("scripts/setup-rkaiq.sh")).unwrap();
         assert!(
             script.contains("/usr/local/sbin/rkaiq-modinfo-shim.c")
-                || script.contains("install -m 644 \"$SHIM_SRC\" /usr/local/sbin/rkaiq-modinfo-shim.c"),
+                || script
+                    .contains("install -m 644 \"$SHIM_SRC\" /usr/local/sbin/rkaiq-modinfo-shim.c"),
             "setup-rkaiq.sh must leave the shim beside the installed copy at /usr/local/sbin, not just in /usr/local/lib"
         );
     }
