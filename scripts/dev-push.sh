@@ -1,7 +1,7 @@
 #!/bin/sh
 # Build the daemon on this laptop and install it on a board, without CI.
 #
-# Usage:  scripts/dev-push.sh [--docker] [--dry-run] [--bootstrap] [user@host]
+# Usage:  scripts/dev-push.sh [--docker] [--dry-run] [--bootstrap] [--skip-copy] [user@host]
 #         scripts/dev-push.sh --name duck-c51b       # find the board over Bluetooth
 #         DUCK_ROBOT=duck-c51b scripts/dev-push.sh
 #
