@@ -50,6 +50,7 @@ KEY="${DUCK_DEV_SECRET_KEY:-$HOME/.duck-keys/team.dev.key}"
 BOOTSTRAP=no
 DRY_RUN=no
 DOCKER=no
+SKIP_COPY=no
 # Both empty here and filled from the environment below, after the arguments have had their say.
 BOARD=""
 ROBOT=""
@@ -59,6 +60,7 @@ while [ $# -gt 0 ]; do
         --bootstrap) BOOTSTRAP=yes ;;
         --dry-run) DRY_RUN=yes ;;
         --docker) DOCKER=yes ;;
+        --skip-copy) SKIP_COPY=yes ;;
         --name)
             shift
             [ $# -gt 0 ] || { echo "--name needs a robot name" >&2; exit 2; }
@@ -403,16 +405,20 @@ cargo run -p xtask -- package \
 echo "==> signing with $KEY"
 cargo run -p xtask -- sign --dir dist --key "$KEY"
 
-# Replaced rather than added to: a directory holding two builds makes "the newest one here"
-# ambiguous to read, and nothing on the board needs yesterday's push.
-echo "==> copying to $BOARD:$REMOTE_DIR"
-# shellcheck disable=SC2029  # expanding the path here is the intent: it is this laptop's
-# setting, and the board has no DUCK_SIDELOAD_DIR to read.
-ssh "$BOARD" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
-# `scp`, not `rsync`: the artifact is a single compressed blob that changes completely every
-# build, so there is no delta to exploit, and this needs nothing on the board that ssh did not
-# already bring.
-scp -q dist/* "$BOARD:$REMOTE_DIR/"
+if [ "$SKIP_COPY" = no ]; then
+    # Replaced rather than added to: a directory holding two builds makes "the newest one here"
+    # ambiguous to read, and nothing on the board needs yesterday's push.
+    echo "==> copying to $BOARD:$REMOTE_DIR"
+    # shellcheck disable=SC2029  # expanding the path here is the intent: it is this laptop's
+    # setting, and the board has no DUCK_SIDELOAD_DIR to read.
+    ssh "$BOARD" "rm -rf '$REMOTE_DIR' && mkdir -p '$REMOTE_DIR'"
+    # `scp`, not `rsync`: the artifact is a single compressed blob that changes completely every
+    # build, so there is no delta to exploit, and this needs nothing on the board that ssh did not
+    # already bring.
+    scp -q dist/* "$BOARD:$REMOTE_DIR/"
+else
+    echo "==> skipping copy (already on board)"
+fi
 
 if [ "$BOOTSTRAP" = yes ]; then
     # For a board whose *installed* `updaterd` predates `apply --from` and therefore cannot be
