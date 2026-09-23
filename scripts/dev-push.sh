@@ -1,7 +1,7 @@
 #!/bin/sh
 # Build the daemon on this laptop and install it on a board, without CI.
 #
-# Usage:  scripts/dev-push.sh [--docker] [--dry-run] [--bootstrap] [--skip-copy] [user@host]
+# Usage:  scripts/dev-push.sh [--docker] [--dry-run] [--bootstrap] [--skip-build] [--skip-copy] [--skip-apply] [user@host]
 #         scripts/dev-push.sh --name duck-c51b       # find the board over Bluetooth
 #         DUCK_ROBOT=duck-c51b scripts/dev-push.sh
 #
@@ -50,7 +50,9 @@ KEY="${DUCK_DEV_SECRET_KEY:-$HOME/.duck-keys/team.dev.key}"
 BOOTSTRAP=no
 DRY_RUN=no
 DOCKER=no
+SKIP_BUILD=no
 SKIP_COPY=no
+SKIP_APPLY=no
 # Both empty here and filled from the environment below, after the arguments have had their say.
 BOARD=""
 ROBOT=""
@@ -60,7 +62,9 @@ while [ $# -gt 0 ]; do
         --bootstrap) BOOTSTRAP=yes ;;
         --dry-run) DRY_RUN=yes ;;
         --docker) DOCKER=yes ;;
+        --skip-build) SKIP_BUILD=yes ;;
         --skip-copy) SKIP_COPY=yes ;;
+        --skip-apply) SKIP_APPLY=yes ;;
         --name)
             shift
             [ $# -gt 0 ] || { echo "--name needs a robot name" >&2; exit 2; }
@@ -223,6 +227,7 @@ if [ -z "$REMOTE_DIR" ]; then
     [ -n "$REMOTE_DIR" ] || { echo "could not resolve a home directory on $BOARD" >&2; exit 1; }
 fi
 
+build_artifact() {
 if [ "$DOCKER" = no ]; then
     # `command -v`, not `cargo zigbuild --version`: the subcommand forwards its arguments to
     # `cargo build`, which rejects `--version`, so asking it that way reports the toolchain as
@@ -404,6 +409,38 @@ cargo run -p xtask -- package \
 
 echo "==> signing with $KEY"
 cargo run -p xtask -- sign --dir dist --key "$KEY"
+}
+
+manifest_version() {
+    awk -F'"' '/"version"[[:space:]]*:/ { print $4; exit }' "$1"
+}
+
+if [ "$SKIP_COPY" = yes ]; then
+    # A skipped copy must also skip the local build. Otherwise VERSION points at a new artifact
+    # while the board still contains the previous manifest, causing verification to fail.
+    SKIP_BUILD=yes
+fi
+
+if [ "$SKIP_BUILD" = yes ]; then
+    if [ "$SKIP_COPY" = yes ]; then
+        VERSION="$(ssh "$BOARD" "cat '$REMOTE_DIR/manifest.json'" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+        [ -n "$VERSION" ] || {
+            echo "no manifest.json in $BOARD:$REMOTE_DIR; cannot use --skip-copy" >&2
+            exit 1
+        }
+        echo "==> reusing remote artifact $VERSION"
+    else
+        [ -f dist/manifest.json ] || {
+            echo "no dist/manifest.json; remove --skip-build or build an artifact first" >&2
+            exit 1
+        }
+        VERSION="$(manifest_version dist/manifest.json)"
+        [ -n "$VERSION" ] || { echo "dist/manifest.json has no version" >&2; exit 1; }
+        echo "==> reusing local artifact $VERSION"
+    fi
+else
+    build_artifact
+fi
 
 if [ "$SKIP_COPY" = no ]; then
     # Replaced rather than added to: a directory holding two builds makes "the newest one here"
@@ -417,7 +454,12 @@ if [ "$SKIP_COPY" = no ]; then
     # already bring.
     scp -q dist/* "$BOARD:$REMOTE_DIR/"
 else
-    echo "==> skipping copy (already on board)"
+    echo "==> skipping copy (using the existing remote artifact)"
+fi
+
+if [ "$SKIP_APPLY" = yes ]; then
+    echo "==> skipping apply"
+    exit 0
 fi
 
 if [ "$BOOTSTRAP" = yes ]; then

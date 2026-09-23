@@ -266,7 +266,9 @@ mode = "walk"
 # Sit down gracefully and power the machine off when the battery EMA reaches the empty
 # floor (6.6 V — the same value the battery percentage maps to 0%). The EMA moves over
 # ~10 s, so a load sag cannot trip it; reaching 6.6 requires a genuinely spent pack.
-# battery_empty_shutdown = true
+# During hardware bring-up, keep the daemon alive and report the low-voltage condition instead
+# of powering the board off. Restore `true` before deploying a robot outside the bench.
+battery_empty_shutdown = false
 
 [audio]
 # The robot's voice (the seeded synth bank under /var/lib/robot/sounds — rendered by the
