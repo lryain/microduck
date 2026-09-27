@@ -1065,6 +1065,7 @@ mod tests {
             s,
             vec![
                 "bus",
+                "walking_imu",
                 "control",
                 "update_gate",
                 "policy",

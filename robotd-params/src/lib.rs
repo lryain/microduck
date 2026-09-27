@@ -71,6 +71,7 @@ pub struct Params {
     pub audio: AudioParams,
     pub theremin: ThereminParams,
     pub head_imu: HeadImuParams,
+    pub walking_imu: WalkingImuParams,
     pub chorale: ChoraleParams,
     pub media: MediaParams,
     ///
@@ -1784,6 +1785,43 @@ pub struct Bus {
     /// Serial port the servos and the IMU board share. The Radxa Zero 3W wires them to
     /// `/dev/ttyS2`.
     pub port: String,
+}
+
+/// The IMU used by the walking policy. `dynamixel` is the rollback-safe default; the external
+/// option moves the walking sensor to an independently polled BNO085/BNO088 on Zero 3W I2C.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WalkingImuSource {
+    Dynamixel,
+    Bno08xI2c,
+}
+
+impl Default for WalkingImuSource {
+    fn default() -> Self {
+        Self::Dynamixel
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, default)]
+pub struct WalkingImuParams {
+    pub source: WalkingImuSource,
+    pub bus: String,
+    pub address: u8,
+    pub hz: u32,
+    pub stale_after_ms: u64,
+}
+
+impl Default for WalkingImuParams {
+    fn default() -> Self {
+        Self {
+            source: WalkingImuSource::Dynamixel,
+            bus: "/dev/i2c-pihat".into(),
+            address: 0x4a,
+            hz: 100,
+            stale_after_ms: 100,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

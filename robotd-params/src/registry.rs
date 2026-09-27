@@ -102,6 +102,32 @@ const fn feature(key: &'static str, kind: Kind, doc: &'static str) -> Entry {
 pub const REGISTRY: &[Entry] = &[
     // ── [bus] ────────────────────────────────────────────────────────────────
     entry("bus.port", Kind::Text, "Dynamixel serial port device"),
+    // ── [walking_imu] ───────────────────────────────────────────────────────
+    entry(
+        "walking_imu.source",
+        Kind::Choice(&["dynamixel", "bno08x_i2c"]),
+        "Walking IMU backend",
+    ),
+    entry(
+        "walking_imu.bus",
+        Kind::Text,
+        "External walking IMU I2C device",
+    ),
+    entry(
+        "walking_imu.address",
+        Kind::Integer,
+        "External walking IMU I2C address",
+    ),
+    entry(
+        "walking_imu.hz",
+        Kind::Integer,
+        "External walking IMU report rate",
+    ),
+    entry(
+        "walking_imu.stale_after_ms",
+        Kind::Integer,
+        "Maximum age of an external walking IMU sample",
+    ),
     // ── [control] ────────────────────────────────────────────────────────────
     entry("control.hz", Kind::Integer, "Control loop rate"),
     entry(

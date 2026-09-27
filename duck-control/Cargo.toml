@@ -43,5 +43,14 @@ rustypot = "1.6.0"
 # same reason; this crate has to as well, or cargo's feature unification turns it back on.
 serialport = { version = "4.8", default-features = false }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+# BNO08x SHTP/I2C transport. `bno080` is an open-source BSD-3-Clause driver whose
+# protocol implementation is compatible with the BNO085/BNO088 family. The adapter
+# below owns the Linux I2C device on a worker thread; this dependency never enters the
+# 50 Hz control path.
+bno080 = "0.1.3"
+i2cdev = "0.6"
+embedded-hal-02 = { package = "embedded-hal", version = "0.2.7", features = ["unproven"] }
+
 [dev-dependencies]
 serde_json.workspace = true

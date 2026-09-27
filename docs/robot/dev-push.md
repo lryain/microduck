@@ -204,11 +204,20 @@ The push leaves the artifact in `~/duck-sideload` on the board, so it can be ins
 building anything:
 
 ```bash
+scripts/dev-push.sh --skip-copy radxa@192.168.1.42
+```
+
+Or by hand on the board:
+
+```bash
 sudo robotctl update apply daemon --from ~/duck-sideload
 ```
 
 The same command takes any directory holding a release — a USB stick, for instance. Each push
 replaces that directory rather than adding to it.
+
+Use `--skip-apply` to build and upload without applying, or `--skip-build` to upload a previously
+packaged local `dist/` without rebuilding it.
 
 ## Compile for the board without a robot
 

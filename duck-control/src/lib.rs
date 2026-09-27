@@ -7,7 +7,10 @@
 //! The control path it holds — model, bus, [`io::RobotIo`], observations, policy, safety — is
 //! designed in `docs/design/robotd-design.md` §2.
 
+#[cfg(target_os = "linux")]
+pub mod bno08x_i2c;
 pub mod bus;
+pub mod external_imu;
 pub mod fall;
 pub mod imu;
 pub mod io;

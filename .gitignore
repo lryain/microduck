@@ -29,3 +29,5 @@ __pycache__/
 # holding `*` so it self-ignores; this is for the person who reaches for `python -m venv`, which
 # does not, and it is the same accident `__pycache__` above was added for.
 .venv/
+deploy/dev-key/team.dev22.pub
+docs/tlv320aic3104.pdf

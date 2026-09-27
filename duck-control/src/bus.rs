@@ -17,6 +17,9 @@ use std::time::Duration;
 
 use rustypot::servo::dynamixel::xl330::Xl330Controller;
 
+#[cfg(target_os = "linux")]
+use crate::bno08x_i2c::Bno08xWorker;
+use crate::external_imu::ExternalImu;
 use crate::imu::{IMU_BLOCK_LEN, SflpDecoder};
 use crate::io::{ImuStale, IoError, JointTargets, Result, RobotIo, Sensors, SlowSensors};
 use crate::model::{
@@ -111,6 +114,10 @@ pub struct DynamixelIo {
     /// the same sample, which means the policy is being fed dead orientation data — a
     /// failure that is invisible unless someone counts it. Known to happen.
     stale_imu: StaleImuTracker,
+    external_imu: Option<ExternalImu>,
+    external_imu_max_age: Duration,
+    #[cfg(target_os = "linux")]
+    external_imu_worker: Option<Bno08xWorker>,
 }
 
 impl DynamixelIo {
@@ -127,7 +134,27 @@ impl DynamixelIo {
             ids,
             imu: SflpDecoder::default(),
             stale_imu: StaleImuTracker::default(),
+            external_imu: None,
+            external_imu_max_age: Duration::from_millis(100),
+            #[cfg(target_os = "linux")]
+            external_imu_worker: None,
         })
+    }
+
+    /// Switch the control loop to a worker-owned external IMU. The worker is deliberately
+    /// passed in rather than created here: opening and retrying I2C must never happen on the
+    /// control thread.
+    pub fn with_external_imu(mut self, imu: ExternalImu, max_age: Duration) -> Self {
+        self.external_imu = Some(imu);
+        self.external_imu_max_age = max_age;
+        self.ids = JOINT_IDS.to_vec();
+        self
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn with_external_imu_worker(mut self, worker: Bno08xWorker) -> Self {
+        self.external_imu_worker = Some(worker);
+        self
     }
 
     /// Assert — and correct — the EEPROM registers the control loop depends on.
@@ -439,8 +466,17 @@ impl RobotIo for DynamixelIo {
 
         let mut sensors = Sensors::default();
 
-        // Slot 0 is the IMU board.
-        if blocks[0].len() == IMU_BLOCK_LEN {
+        if let Some(external) = &self.external_imu {
+            let sample = external
+                .snapshot(self.external_imu_max_age)
+                .ok_or_else(|| {
+                    IoError::Bus("external walking IMU has no fresh sample".to_owned())
+                })?;
+            sensors.imu = sample.data;
+        }
+
+        // Slot 0 is the IMU board in the legacy combined-bus mode.
+        if self.external_imu.is_none() && blocks[0].len() == IMU_BLOCK_LEN {
             let mut raw = [0u8; IMU_BLOCK_LEN];
             raw.copy_from_slice(&blocks[0]);
             // Say so, or the counters are numbers nobody ever reads — but only once the run
@@ -456,7 +492,7 @@ impl RobotIo for DynamixelIo {
                 );
             }
             sensors.imu = self.imu.decode(&raw);
-        } else {
+        } else if self.external_imu.is_none() {
             return Err(IoError::ShortRead {
                 what: "imu block",
                 expected: IMU_BLOCK_LEN,
@@ -464,7 +500,12 @@ impl RobotIo for DynamixelIo {
             });
         }
 
-        for (joint, block) in blocks[1..].iter().enumerate() {
+        let motor_blocks = if self.external_imu.is_some() {
+            &blocks[..]
+        } else {
+            &blocks[1..]
+        };
+        for (joint, block) in motor_blocks.iter().enumerate() {
             if block.len() != READ_LEN as usize {
                 return Err(IoError::ShortRead {
                     what: "motor block",
@@ -589,6 +630,11 @@ impl RobotIo for DynamixelIo {
     }
 
     fn imu_ready(&self) -> bool {
+        if let Some(external) = &self.external_imu {
+            return external
+                .snapshot(self.external_imu_max_age)
+                .is_some_and(|sample| sample.ready);
+        }
         self.imu.ready()
     }
 }

@@ -46,7 +46,7 @@ use tokio::net::{UnixListener, UnixStream};
 
 use control::{Controller, Driving, SkillTuning, Tuning};
 use intents::Intents;
-use params::{Mode, Params, Slot};
+use params::{Mode, Params, Slot, WalkingImuSource};
 
 /// What to do when the shutdown sequence completes. Injected so the tests can observe the
 /// call instead of powering off the machine running them.
@@ -1030,7 +1030,7 @@ fn run_init(params: &Params, duration: Duration) -> ExitCode {
     // The same open as the daemon's, replacement adoption included: `init` is what someone
     // reaches for right after a motor swap, and it must not be the one path that refuses the
     // new servo.
-    let Some(mut io) = open_bus(&params.bus.port, 0) else {
+    let Some(mut io) = open_bus(&params.bus.port, 0, &params.walking_imu) else {
         return ExitCode::FAILURE;
     };
     if let Err(e) = io.set_torque(true) {
@@ -1081,6 +1081,7 @@ fn spawn_control_thread(
     let fake = args.fake;
     let sim = args.sim.clone();
     let port = params.bus.port.clone();
+    let walking_imu = params.walking_imu.clone();
     let params = params.clone();
     // So a reload can re-read `[policy]` without a restart. The path rather than the loaded
     // params, because the point is to pick up what has been written since.
@@ -1142,7 +1143,7 @@ fn spawn_control_thread(
             // loop has not completed a cycle yet", forever, whatever happened to the robot
             // afterwards. Retrying the read alone was not enough: execution never got there.
             runtime.block_on(async move {
-                if let Some(io) = open_bus_waiting(&port, &state).await {
+                if let Some(io) = open_bus_waiting(&port, &state, &walking_imu).await {
                     control_loop(io, state, intents, params, params_path, period, poweroff).await;
                 }
             });
@@ -1162,13 +1163,17 @@ type BusIo = FakeIo;
 /// one to abandon the control loop over.
 ///
 /// Returns `None` only if shutdown is requested while waiting.
-async fn open_bus_waiting(port: &str, state: &RobotState) -> Option<BusIo> {
+async fn open_bus_waiting(
+    port: &str,
+    state: &RobotState,
+    walking_imu: &params::WalkingImuParams,
+) -> Option<BusIo> {
     let mut attempt = 0u32;
 
     while !state.shutdown.load(Ordering::Relaxed) {
         // Logging lives in `open_bus`, which is chatty by design on the first attempt and
         // quiet thereafter — a board waiting overnight must not fill the journal.
-        if let Some(io) = open_bus(port, attempt) {
+        if let Some(io) = open_bus(port, attempt, walking_imu) {
             state.startup_bus_failures.store(0, Ordering::Relaxed);
             return Some(io);
         }
@@ -1188,7 +1193,7 @@ async fn open_bus_waiting(port: &str, state: &RobotState) -> Option<BusIo> {
 
 /// Open and verify the bus, or explain why not.
 #[cfg(target_os = "linux")]
-fn open_bus(port: &str, attempt: u32) -> Option<BusIo> {
+fn open_bus(port: &str, attempt: u32, walking_imu: &params::WalkingImuParams) -> Option<BusIo> {
     // First attempt and every thirtieth — about one line per 30 s while waiting.
     let loud = attempt == 0 || attempt.is_multiple_of(STARTUP_READ_LOG_EVERY);
 
@@ -1218,6 +1223,30 @@ fn open_bus(port: &str, attempt: u32) -> Option<BusIo> {
             return None;
         }
     }
+    #[cfg(target_os = "linux")]
+    if walking_imu.source == WalkingImuSource::Bno08xI2c {
+        let external = duck_control::external_imu::ExternalImu::new();
+        let worker = duck_control::bno08x_i2c::Bno08xWorker::spawn(
+            walking_imu.bus.clone(),
+            walking_imu.address,
+            walking_imu.hz,
+            external.clone(),
+        );
+        tracing::info!(
+            bus = %walking_imu.bus,
+            address = walking_imu.address,
+            hz = walking_imu.hz,
+            "using external BNO08x walking IMU"
+        );
+        return Some(
+            io.with_external_imu(
+                external,
+                Duration::from_millis(walking_imu.stale_after_ms.max(1)),
+            )
+            .with_external_imu_worker(worker),
+        );
+    }
+
     Some(io)
 }
 
@@ -1261,6 +1290,13 @@ fn adopt_missing_servo(io: &mut BusIo, loud: bool) -> bool {
         }
         return false;
     };
+    if loud {
+        tracing::warn!(
+            ?missing,
+            id,
+            "one expected servo did not answer the startup ping census; probing factory defaults"
+        );
+    }
     match io.adopt_replacement(id) {
         Ok(true) => true,
         Ok(false) => {
@@ -1283,7 +1319,7 @@ fn adopt_missing_servo(io: &mut BusIo, loud: bool) -> bool {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn open_bus(_port: &str, _attempt: u32) -> Option<BusIo> {
+fn open_bus(_port: &str, _attempt: u32, _walking_imu: &params::WalkingImuParams) -> Option<BusIo> {
     tracing::error!("no bus on this platform; use --fake");
     None
 }
@@ -1833,6 +1869,8 @@ async fn control_loop<T: RobotIo>(
     let mut shutdown_sit: Option<Instant> = None;
     let mut powered_off = false;
     let mut warned_imu_warming = false;
+    let mut warned_battery_floor = false;
+    let no_poweroff = std::env::var_os("ROBOTD_NO_POWEROFF").is_some();
 
     // Limp-fall (`[safety] limp_fall`): the predictor that sees a fall start, and where the
     // sequence it drives has got to. Built whether or not the mode is on — it costs a
@@ -2320,9 +2358,21 @@ async fn control_loop<T: RobotIo>(
         // The battery reading is a ~10 s EMA refreshed once a second, so a load sag cannot
         // reach the floor — a pack that gets there is spent.
         let battery_v = f64::from_bits(state.battery_v.load(Ordering::Relaxed));
-        let battery_empty = params.safety.battery_empty_shutdown
-            && battery_v > 0.0
+        let below_battery_floor = battery_v > 0.0
             && battery_v <= duck_control::model::BATTERY_EMPTY_V;
+        let battery_shutdown_enabled = params.safety.battery_empty_shutdown && !no_poweroff;
+        let battery_empty = battery_shutdown_enabled && below_battery_floor;
+        if below_battery_floor && !battery_shutdown_enabled && !warned_battery_floor {
+            tracing::error!(
+                volts = battery_v,
+                threshold = duck_control::model::BATTERY_EMPTY_V,
+                no_poweroff,
+                "battery is below the shutdown threshold; automatic poweroff is disabled"
+            );
+            warned_battery_floor = true;
+        } else if !below_battery_floor {
+            warned_battery_floor = false;
+        }
         if !powered_off && shutdown_sit.is_none() && (intents.take_shutdown() || battery_empty) {
             let can_sit = snapshot.enabled
                 && bringup == Bringup::Ready
@@ -6748,9 +6798,13 @@ mod tests {
         ));
         let waiter_state = Arc::clone(&s);
         let handle = tokio::spawn(async move {
-            open_bus_waiting("/dev/definitely-not-a-bus", &waiter_state)
-                .await
-                .is_none()
+            open_bus_waiting(
+                "/dev/definitely-not-a-bus",
+                &waiter_state,
+                &params::WalkingImuParams::default(),
+            )
+            .await
+            .is_none()
         });
 
         // Bounded, so a regression fails rather than hanging CI.
