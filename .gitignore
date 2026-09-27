@@ -32,3 +32,4 @@ __pycache__/
 docs/tlv320aic3104.pdf
 deploy/dev-key/team.dev22.pub
 docs/design/external-walking-imu.md
+install-audio-driver.sh
