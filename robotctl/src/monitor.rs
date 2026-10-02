@@ -96,6 +96,10 @@ const IMU_REPAINT: Duration = Duration::from_millis(33);
 /// asks for it with `t`.
 const TOF_HEIGHT: u16 = 10;
 
+/// Rows the head IMU block occupies while it is open: two borders and three rows
+/// of gyro/accel/temp data.
+const HEAD_IMU_HEIGHT: u16 = 5;
+
 /// Rows of axis cells the pad block draws.
 ///
 /// Three fits every axis of an Xbox pad from 80 columns up, and the caption says how many were left
@@ -277,6 +281,12 @@ enum Update {
     /// The health poll is not answering. Not fatal either: it is a connection of its own, and
     /// the state stream ending is what [`Self::Ended`] is for.
     HealthLost(String),
+    /// One head IMU sample from `tofd`'s BMI088.
+    HeadImu(Box<proto::HeadImuFrame>),
+    /// `tofd`'s answer to the head IMU subscription: which sensor, or why there is none.
+    HeadImuStatus(Box<proto::HeadImuStreamResult>),
+    /// The head IMU stream is not there, or stopped. Not fatal.
+    HeadImuLost(String),
 }
 
 /// Subscribe to `robot.state` and render it until interrupted.
@@ -329,6 +339,8 @@ pub fn run(
     let pad_tx = tx.clone();
     let tx_for_tof = tx.clone();
     let health_tx = tx.clone();
+    let head_imu_tx = tx.clone();
+    let tx_for_states = tx;
     let pad_socket = pad_socket.to_path_buf();
 
     // Held for as long as the view lives, not dropped: it is the write half of the subscription,
@@ -336,7 +348,7 @@ pub fn run(
     // rendered.
     let _writer = robot.map(|client| {
         let Client { reader, writer, .. } = client;
-        thread::spawn(move || read_states(reader, &tx));
+        thread::spawn(move || read_states(reader, &tx_for_states));
         writer
     });
 
@@ -350,7 +362,13 @@ pub fn run(
     // silence may hold up the two streams that are always there.
     let tof_tx = tx_for_tof;
     let tof_socket = tof_socket.to_path_buf();
+    let tof_socket_for_imu = tof_socket.clone();
     thread::spawn(move || read_tof(&tof_socket, &tof_tx));
+
+    // A fifth connection — to the same `tofd`, but the head IMU stream. The BMI088
+    // on the HAT is read at 100 Hz and costs ~4% of a core, so it is off by default
+    // and most ducks have none fitted. Same retry logic as the ToF and pad readers.
+    thread::spawn(move || read_head_imu(&tof_socket_for_imu, &head_imu_tx));
 
     // A fourth connection — to the daemon the first one is already streaming from. The battery,
     // the temperatures and the bus counters answer `robot.health`, which is a *call*, and the
@@ -588,6 +606,64 @@ fn subscribe_to_tof(socket: &Path, tx: &mpsc::Sender<Update>) -> Result<(), Stri
                 {
                     Some(frame) => {
                         if tx.send(Update::Tof(Box::new(frame))).is_err() {
+                            return Ok(()); // the UI is gone
+                        }
+                        continue;
+                    }
+                    None => continue,
+                }
+            }
+        });
+    }
+}
+
+/// Watch `tofd`'s head IMU stream, retrying forever.
+///
+/// Same shape as [`read_tof`]: the head IMU lives on the same daemon and socket as the ToF,
+/// but is a separate stream. Most ducks have no BMI088 fitted, so absence is normal.
+fn read_head_imu(socket: &Path, tx: &mpsc::Sender<Update>) {
+    loop {
+        if let Err(why) = subscribe_to_head_imu(socket, tx)
+            && tx.send(Update::HeadImuLost(why)).is_err()
+        {
+            return; // the UI is gone
+        }
+        thread::sleep(PAD_RETRY);
+    }
+}
+
+/// One connection to the head IMU stream, from its subscribe to whatever ended it.
+fn subscribe_to_head_imu(socket: &Path, tx: &mpsc::Sender<Update>) -> Result<(), String> {
+    let mut client = Client::connect_to("tofd", socket).map_err(|e| e.message)?;
+    client
+        .send(&proto::Request::call(
+            proto::Id::Number(SUBSCRIBE_ID),
+            &proto::Call::HeadImuStream,
+        ))
+        .map_err(|e| e.message)?;
+
+    let mut line = String::new();
+    loop {
+        line.clear();
+        return Err(match client.reader.read_line(&mut line) {
+            Err(e) => format!("the head IMU stream stopped: {e}"),
+            Ok(0) => "tofd closed the head IMU stream".to_owned(),
+            Ok(_) => {
+                // The answer names the sensor; everything after it is a frame.
+                if let Ok(response) = serde_json::from_str::<proto::Response>(&line)
+                    && let Ok(status) = response.result_as::<proto::HeadImuStreamResult>()
+                {
+                    if tx.send(Update::HeadImuStatus(Box::new(status))).is_err() {
+                        return Ok(()); // the UI is gone
+                    }
+                    continue;
+                }
+                match serde_json::from_str::<proto::Request>(&line)
+                    .ok()
+                    .and_then(|r| r.as_head_imu_frame())
+                {
+                    Some(frame) => {
+                        if tx.send(Update::HeadImu(Box::new(frame))).is_err() {
                             return Ok(()); // the UI is gone
                         }
                         continue;
@@ -881,6 +957,12 @@ fn live(
                     // them.
                     KeyCode::Char('t') => {
                         view.toggle_tof();
+                        fresh = true;
+                    }
+                    // The head IMU (BMI088). Off by default: it is worth five rows only
+                    // to someone asking about the head IMU.
+                    KeyCode::Char('i') => {
+                        view.toggle_head_imu();
                         fresh = true;
                     }
                     // The 3D robot view. On by default — it appears whenever the
@@ -1317,6 +1399,16 @@ struct View {
     health_at: Option<Instant>,
     /// Why the health poll is not answering, when it is not.
     health_lost: Option<String>,
+    /// The last head IMU frame from `tofd`'s BMI088.
+    head_imu: Option<proto::HeadImuFrame>,
+    /// When that frame arrived.
+    head_imu_arrived: Option<Instant>,
+    /// What `tofd` said about its head IMU sensor, if it has answered.
+    head_imu_status: Option<proto::HeadImuStreamResult>,
+    /// Why there is no head IMU stream, when there is none.
+    head_imu_lost: Option<String>,
+    /// Is the head IMU block open? Closed to begin with — see [`HEAD_IMU_HEIGHT`].
+    show_head_imu: bool,
 }
 
 impl View {
@@ -1347,6 +1439,11 @@ impl View {
             health: None,
             health_at: None,
             health_lost: None,
+            head_imu: None,
+            head_imu_arrived: None,
+            head_imu_status: None,
+            head_imu_lost: None,
+            show_head_imu: false,
         }
     }
 
@@ -1356,6 +1453,10 @@ impl View {
 
     fn toggle_tof(&mut self) {
         self.show_tof = !self.show_tof;
+    }
+
+    fn toggle_head_imu(&mut self) {
+        self.show_head_imu = !self.show_head_imu;
     }
 
     fn toggle_pad(&mut self) {
@@ -1459,6 +1560,23 @@ impl View {
                 self.latest = Some(*state);
                 Ok(true)
             }
+            Update::HeadImu(frame) => {
+                self.head_imu = Some(*frame);
+                self.head_imu_arrived = Some(Instant::now());
+                self.head_imu_lost = None;
+                Ok(self.show_head_imu)
+            }
+            Update::HeadImuStatus(status) => {
+                self.head_imu_status = Some(*status);
+                self.head_imu_lost = None;
+                Ok(self.show_head_imu)
+            }
+            Update::HeadImuLost(why) => {
+                self.head_imu_lost = Some(why);
+                self.head_imu = None;
+                self.head_imu_status = None;
+                Ok(self.show_head_imu)
+            }
         }
     }
 
@@ -1480,9 +1598,11 @@ impl View {
             // watching the sticks.
             let pad_height = self.pad_height();
             let tof_height = if self.show_tof { TOF_HEIGHT } else { 0 };
-            let [pad, tof, rest] = Layout::vertical([
+            let head_imu_height = if self.show_head_imu { HEAD_IMU_HEIGHT } else { 0 };
+            let [pad, tof, head_imu, rest] = Layout::vertical([
                 Constraint::Length(pad_height),
                 Constraint::Length(tof_height),
+                Constraint::Length(head_imu_height),
                 Constraint::Min(3),
             ])
             .areas(area);
@@ -1492,12 +1612,15 @@ impl View {
             if self.show_tof {
                 self.render_tof(frame, tof);
             }
+            if self.show_head_imu {
+                self.render_head_imu(frame, head_imu);
+            }
             let waiting = match &self.no_robot {
                 // Named rather than folded into "waiting", because waiting for a robot that is
                 // there and waiting for one that is not need different things done about them.
                 Some(why) => {
                     format!(
-                        "no robotd: {why}\nthe pad and tof blocks still work — p and t toggle them"
+                        "no robotd: {why}\nthe pad, tof and head imu blocks still work — p, t and i toggle them"
                     )
                 }
                 None => "waiting for robot.state…".to_owned(),
@@ -1537,14 +1660,16 @@ impl View {
         // the order the robot does — sticks, command, joints, loop rate.
         let pad_height = self.pad_height();
         let tof_height = if self.show_tof { TOF_HEIGHT } else { 0 };
+        let head_imu_height = if self.show_head_imu { HEAD_IMU_HEIGHT } else { 0 };
         let trace_height = area
             .height
-            .saturating_sub(HEADER_HEIGHT + pad_height + tof_height + rows as u16 + 3)
+            .saturating_sub(HEADER_HEIGHT + pad_height + tof_height + head_imu_height + rows as u16 + 3)
             .clamp(3, 6);
-        let [header, pad, tof, joints, trace] = Layout::vertical([
+        let [header, pad, tof, head_imu, joints, trace] = Layout::vertical([
             Constraint::Length(HEADER_HEIGHT),
             Constraint::Length(pad_height),
             Constraint::Length(tof_height),
+            Constraint::Length(head_imu_height),
             Constraint::Min(4),
             Constraint::Length(trace_height),
         ])
@@ -1565,6 +1690,9 @@ impl View {
         // the robot does — what it was told, what it sees, what it did.
         if self.show_tof {
             self.render_tof(frame, tof);
+        }
+        if self.show_head_imu {
+            self.render_head_imu(frame, head_imu);
         }
         frame.render_stateful_widget(
             self.joints(state, rows, visible),
@@ -2368,6 +2496,96 @@ impl View {
                 })
             })
             .collect()
+    }
+
+    /// Render the head IMU block: gyro, accel, quaternion and temperature.
+    fn render_head_imu(&self, frame: &mut ratatui::Frame, area: ratatui::layout::Rect) {
+        let block = Block::bordered()
+            .title(Line::from(self.head_imu_title()))
+            .title_bottom(Line::from(self.head_imu_caption()).right_aligned());
+        let inner = block.inner(area);
+        frame.render_widget(block, area);
+
+        let Some(imu) = self.head_imu.as_ref() else {
+            frame.render_widget(Paragraph::new(self.head_imu_absence()).dim(), inner);
+            return;
+        };
+
+        let lines = vec![
+            Line::from(vec![
+                Span::styled("gyro", Style::new().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                Span::raw(format!(
+                    "  [{:+.3}, {:+.3}, {:+.3}] rad/s",
+                    imu.gyro[0], imu.gyro[1], imu.gyro[2]
+                )),
+            ]),
+            Line::from(vec![
+                Span::styled("accel", Style::new().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                Span::raw(format!(
+                    "  [{:+.2}, {:+.2}, {:+.2}] m/s²",
+                    imu.accel[0], imu.accel[1], imu.accel[2]
+                )),
+            ]),
+            Line::from(vec![
+                Span::styled("quat", Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::raw(format!(
+                    "  [{:.3}, {:.3}, {:.3}, {:.3}]",
+                    imu.quat[0], imu.quat[1], imu.quat[2], imu.quat[3]
+                )),
+            ]),
+            Line::from(vec![
+                Span::styled("temp", Style::new().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                Span::raw(format!("  {:.1}°C  seq={}", imu.temp_c, imu.seq)),
+            ]),
+        ];
+        frame.render_widget(Paragraph::new(lines), inner);
+    }
+
+    /// Title for the head IMU block.
+    fn head_imu_title(&self) -> Vec<Span<'static>> {
+        let mut title = vec![Span::raw(" head_imu ")];
+        match self.head_imu_status.as_ref() {
+            Some(status) => {
+                let name = status
+                    .sensor
+                    .clone()
+                    .unwrap_or_else(|| "no sensor".to_owned());
+                title.push(Span::styled(
+                    name,
+                    Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                ));
+                title.push(Span::raw(format!(" · {} Hz", status.hz)));
+            }
+            None => {
+                title.push(Span::styled("waiting…", Style::new().dim()));
+            }
+        }
+        title
+    }
+
+    /// Caption for the head IMU block: age or lost status.
+    fn head_imu_caption(&self) -> String {
+        if let Some(why) = &self.head_imu_lost {
+            return why.clone();
+        }
+        if let Some(arrived) = self.head_imu_arrived {
+            let age = arrived.elapsed();
+            if age > Duration::from_secs(1) {
+                return format!("{:.1}s ago", age.as_secs_f64());
+            }
+        }
+        String::new()
+    }
+
+    /// Absence message for the head IMU block.
+    fn head_imu_absence(&self) -> String {
+        if let Some(why) = &self.head_imu_lost {
+            return why.clone();
+        }
+        if self.head_imu_status.is_none() {
+            return "waiting for head_imu.stream…".to_owned();
+        }
+        "no head IMU data".to_owned()
     }
 
     /// `tof <sensor> · <hz> · <rows>×<cols> · <n>/<total> ranged · <min>–<max> m`

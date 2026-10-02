@@ -1,4 +1,5 @@
 # External BNO08x Walking IMU
+default address: 0x28
 
 Status: implementation started, hardware validation required
 
