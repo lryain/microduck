@@ -72,7 +72,8 @@ GST_EXTRA_PLUGIN_DIR=/usr/local/lib/gstreamer-1.0
 #
 # The repository is public on purpose: the download happens during provisioning and, later, from
 # the updater's preinstall hook, which runs with a cleared environment and no token.
-PLUGINS_REPO="${PLUGINS_REPO:-pollen-robotics/microduck-gst-plugins}"
+# PLUGINS_REPO="${PLUGINS_REPO:-pollen-robotics/microduck-gst-plugins}"
+PLUGINS_REPO="${PLUGINS_REPO:-microduck-gst-plugins}"
 PLUGINS_VERSION="${PLUGINS_VERSION:-v3}"
 
 # What the encoder probe looks at. Variables rather than literals for the reason
@@ -393,10 +394,14 @@ EOF
   librockchip-mpp1 and librga2 are not in Debian; this script installs the plugins, and MPP's
   own test binary proves the hardware with no GStreamer involved at all:
 
-    R=https://radxa-repo.github.io/bullseye/pool/main
-    curl -sL -O \$R/m/mpp/librockchip-mpp1_1.5.0-1_arm64.deb
-    curl -sL -O \$R/m/mpp/librockchip-vpu0_1.5.0-1_arm64.deb
-    curl -sL -O \$R/m/mpp/rockchip-mpp-demos_1.5.0-1_arm64.deb
+    # R=https://radxa-repo.github.io/bullseye/pool/main
+    # curl -sL -O \$R/m/mpp/librockchip-mpp1_1.5.0-1_arm64.deb
+    # curl -sL -O \$R/m/mpp/librockchip-vpu0_1.5.0-1_arm64.deb
+    # curl -sL -O \$R/m/mpp/rockchip-mpp-demos_1.5.0-1_arm64.deb
+    R=https://gitee.com/duinopeak/libs/raw/master/libs/microduck
+    curl -sL -O \$R/librockchip-mpp1_1.5.0-1_arm64.deb
+    curl -sL -O \$R/librockchip-vpu0_1.5.0-1_arm64.deb
+    curl -sL -O \$R/rockchip-mpp-demos_1.5.0-1_arm64.deb
     sudo dpkg -i librockchip-mpp1_1.5.0-1_arm64.deb librockchip-vpu0_1.5.0-1_arm64.deb \\
       rockchip-mpp-demos_1.5.0-1_arm64.deb
     sudo mpi_enc_test -w 1280 -h 720 -t 7 -n 60 -o /tmp/out.h264
@@ -442,7 +447,12 @@ EOF
 # plugins in the release were *built* against; see the release MANIFEST.
 MPP_VERSION="${MPP_VERSION:-1.5.0-1}"
 RGA_VERSION="${RGA_VERSION:-2.2.0-1}"
-RADXA_POOL="${RADXA_POOL:-https://radxa-repo.github.io/bullseye/pool/main}"
+# RADXA_POOL="${RADXA_POOL:-https://radxa-repo.github.io/bullseye/pool/main}"
+#https://radxa-repo.github.io/bullseye/pool/main/m/mpp/librockchip-mpp1_1.5.0-1_arm64.deb
+#https://radxa-repo.github.io/bullseye/pool/main/libr/librga/librga2_2.2.0-1_arm64.deb
+#https://radxa-repo.github.io/bullseye/pool/main/m/mpp/rockchip-mpp-demos_1.5.0-1_arm64.deb
+#RADXA_POOL="${RADXA_POOL:-https://radxa-repo.github.io/bullseye/pool/main}"
+RADXA_POOL=https://gitee.com/duinopeak/libs/raw/master/libs/microduck
 
 install_rockchip_userspace() {
     dpkg -s librockchip-mpp1 >/dev/null 2>&1 \
@@ -452,8 +462,8 @@ install_rockchip_userspace() {
     say "fetching Rockchip MPP ${MPP_VERSION} and RGA ${RGA_VERSION} (not in Debian)"
     ok=1
     for path in \
-        "m/mpp/librockchip-mpp1_${MPP_VERSION}_arm64.deb" \
-        "libr/librga/librga2_${RGA_VERSION}_arm64.deb"
+        "librockchip-mpp1_${MPP_VERSION}_arm64.deb" \
+        "librga2_${RGA_VERSION}_arm64.deb"
     do
         curl -fsSL -o "${tmp}/$(basename "$path")" "${RADXA_POOL}/${path}" || ok=0
     done
@@ -481,8 +491,10 @@ install_plugins() {
         return 0
     fi
 
-    name="microduck-gst-plugins-${PLUGINS_VERSION}-aarch64"
-    base="https://github.com/${PLUGINS_REPO}/releases/download/${PLUGINS_VERSION}"
+    # name="microduck-gst-plugins-${PLUGINS_VERSION}-aarch64"
+    # base="https://github.com/${PLUGINS_REPO}/releases/download/${PLUGINS_VERSION}"
+    name="microduck-gst-plugins-v3-aarch64"
+    base="https://gitee.com/duinopeak/libs/raw/master/libs/microduck"
     tmp="$(mktemp -d)"
 
     say "fetching ${name}"

@@ -67,9 +67,12 @@ PIN=/usr/local/bin/rkaiq-pin-sensor-mode
 # Radxa's apt pool, as direct .deb downloads rather than an entry in sources.list — the same
 # route `setup-gstreamer.sh` takes for MPP, and for the same reason: one pinned artifact each,
 # no third-party repository left enabled on the robot afterwards.
-POOL=https://radxa-repo.github.io/bullseye/pool/main
-RKAIQ_DEB="$POOL/c/camera-engine-rkaiq/camera_engine_rkaiq_rk3568_arm64-fixed.deb"
-IQ_DEB="$POOL/r/rockchip-iqfiles/rockchip-iqfiles-rk356x_0.1.16_all.deb"
+# POOL=https://radxa-repo.github.io/bullseye/pool/main
+# RKAIQ_DEB="$POOL/c/camera-engine-rkaiq/camera_engine_rkaiq_rk3568_arm64-fixed.deb"
+# IQ_DEB="$POOL/r/rockchip-iqfiles/rockchip-iqfiles-rk356x_0.1.16_all.deb"
+POOL=https://gitee.com/duinopeak/libs/raw/master/libs/microduck
+RKAIQ_DEB="$POOL/camera_engine_rkaiq_rk3568_arm64-fixed.deb"
+IQ_DEB="$POOL/rockchip-iqfiles-rk356x_0.1.16_all.deb"
 
 # The sensor mode the engine must agree with `mediad` about. See `pin_mode` below for why this
 # is here at all, and keep it in step with `pin_sensor_mode` in `mediad/src/pipeline.rs`.
@@ -303,6 +306,7 @@ systemctl enable rkaiq_3A >/dev/null 2>&1 || warn "could not enable rkaiq_3A"
 if [ "$(cd "$(dirname "$0")" && pwd)/$(basename "$0")" != "$SELF" ]; then
     mkdir -p /usr/local/sbin
     install -m 755 "$0" "$SELF"
+    install -m 644 "$SHIM_SRC" /usr/local/sbin/rkaiq-modinfo-shim.c
     install -m 644 "$SHIM_SRC" /usr/local/lib/rkaiq-modinfo-shim.c
 fi
 

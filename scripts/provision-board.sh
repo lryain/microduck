@@ -704,7 +704,8 @@ if [ -n "$USE_LOCAL" ]; then
     say "sending this clone's provision.sh"
     scp -q "$_local" "$(scp_target /tmp/provision.sh)" || die "could not copy provision.sh"
 else
-    _raw="https://raw.githubusercontent.com/pollen-robotics/microduck/${REF:-main}/scripts/provision.sh"
+    # _raw="https://raw.githubusercontent.com/pollen-robotics/microduck/${REF:-main}/scripts/provision.sh"
+    _raw="https://gitee.com/duinopeak/microduck/raw/${REF:-main}/scripts/provision.sh"
     say "having the board fetch provision.sh from ${REF:-main}"
     # Fetched by the board rather than by this machine and copied over: the board is the one
     # that has to be able to reach GitHub with that token, and finding out here would prove
@@ -728,6 +729,14 @@ _env="DUCK_TOKEN='${DUCK_TOKEN:-}'"
 [ -z "$PAUSE_BTD" ]  || _env="${_env} DUCK_PAUSE_BTD=1"
 [ -z "$NO_GSTREAMER" ] || _env="${_env} DUCK_GSTREAMER=0"
 [ -z "$NO_RKAIQ" ]     || _env="${_env} DUCK_RKAIQ=0"
+if [ -n "${DUCK_PROXY:-}" ]; then
+    say "DUCK_PROXY is set: all board-side fetches will use the configured proxy"
+    _env="${_env} DUCK_PROXY='${DUCK_PROXY}'"
+fi
+if [ -n "${DUCK_SKIP_FETCH_LATEST:-}" ] || [ -n "${DUCK_USE_CACHED:-}" ]; then
+    say "DUCK_SKIP_FETCH_LATEST is set: reusing the cached bootstrap updaterd instead of fetching the latest release"
+    _env="${_env} DUCK_SKIP_FETCH_LATEST='${DUCK_SKIP_FETCH_LATEST:-${DUCK_USE_CACHED}}'"
+fi
 
 # The name is a flag rather than one more `DUCK_*`, because on the board it goes no further than
 # `robotctl system set-name`. Single-quoted with any quote of its own escaped: a name is free text,

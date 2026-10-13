@@ -64,6 +64,8 @@ set -eu
 ENV_REPO="${DUCK_REPO:-}"
 ENV_REF="${DUCK_REF:-}"
 ENV_TOKEN="${DUCK_TOKEN:-}"
+ENV_PROXY="${DUCK_PROXY:-}"
+ENV_SKIP_FETCH_LATEST="${DUCK_SKIP_FETCH_LATEST:-${DUCK_USE_CACHED:-}}"
 ENV_DEV_KEY="${DUCK_DEV_KEY:-}"
 ENV_FORCE="${DUCK_FORCE_REINSTALL:-}"
 ENV_WEIRD_BLE="${DUCK_WEIRD_BLE:-}"
@@ -72,8 +74,10 @@ ENV_GSTREAMER="${DUCK_GSTREAMER:-}"
 ENV_RKAIQ="${DUCK_RKAIQ:-}"
 
 REPO="${ENV_REPO:-pollen-robotics/microduck}"
+REPO="${ENV_REPO:-microduck}"
 REF="${ENV_REF:-main}"
-RAW="https://raw.githubusercontent.com/${REPO}/${REF}/scripts"
+# RAW="https://raw.githubusercontent.com/${REPO}/${REF}/scripts"
+RAW="https://gitee.com/duinopeak/${REPO}/raw/${REF}/scripts"
 
 # For a private repository: a token with read access to contents. Carried across the reboot in
 # the state file rather than asked for twice — see `save_state` for why not `~/.profile`.
@@ -84,6 +88,8 @@ RAW="https://raw.githubusercontent.com/${REPO}/${REF}/scripts"
 # so passing it through in phase 2 is what makes updates work after provisioning, not just
 # during it. `finish` says where it ended up.
 TOKEN="$ENV_TOKEN"
+PROXY="${ENV_PROXY:-${http_proxy:-${https_proxy:-}}}"
+SKIP_FETCH_LATEST="$ENV_SKIP_FETCH_LATEST"
 
 # A name for this robot, or empty to let it name itself. Set by `--name`; see `main`.
 #
@@ -188,6 +194,10 @@ RKAIQ_SELF=/usr/local/sbin/robot-setup-rkaiq
 say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33mwarning:\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+
+if [ -n "$PROXY" ]; then
+    say "DUCK_PROXY is set: board-side download steps will use the configured proxy"
+fi
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -310,7 +320,8 @@ load_state() {
     # kept somewhere else to still win. Nothing else writes `PROVISION_NAME`, so a `--name` on the
     # phase 2 command line survives the sourcing and can simply be preferred.
     NAME="${NAME:-${PROVISION_NAME:-}}"
-    RAW="https://raw.githubusercontent.com/${REPO}/${REF}/scripts"
+    # RAW="https://raw.githubusercontent.com/${REPO}/${REF}/scripts"
+    RAW="https://gitee.com/duinopeak/microduck/raw/${REF}/scripts"
     return 0
 }
 
@@ -616,9 +627,12 @@ phase_two() {
     DUCK_REPO="$REPO"
     DUCK_REF="$REF"
     DUCK_TOKEN="$TOKEN"
+    DUCK_PROXY="$PROXY"
+    DUCK_SKIP_FETCH_LATEST="$SKIP_FETCH_LATEST"
     DUCK_FORCE_REINSTALL="$FORCE_REINSTALL"
     DUCK_BOARD="$BOARD"
-    export DUCK_REPO DUCK_REF DUCK_TOKEN DUCK_FORCE_REINSTALL DUCK_BOARD
+    # export DUCK_REPO DUCK_REF DUCK_TOKEN DUCK_FORCE_REINSTALL DUCK_BOARD
+    export DUCK_REPO DUCK_REF DUCK_TOKEN DUCK_PROXY DUCK_SKIP_FETCH_LATEST DUCK_FORCE_REINSTALL DUCK_BOARD
     if [ -n "$DEV_KEY" ]; then
         DUCK_DEV_KEY="$DEV_KEY"
         export DUCK_DEV_KEY
