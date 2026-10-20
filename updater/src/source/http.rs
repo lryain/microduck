@@ -84,14 +84,12 @@ fn proxy_url() -> Option<String> {
 
 /// Build the shared client.
 pub fn client() -> Result<reqwest::Client, Error> {
-    reqwest::Client::builder()
     let mut builder = reqwest::Client::builder();
     builder = builder
         .user_agent(user_agent())
         .connect_timeout(CONNECT_TIMEOUT)
         // Redirects are followed, but not indefinitely: a redirect loop is a
         // misconfigured mirror, not something to chase.
-        .redirect(reqwest::redirect::Policy::limited(5))
         .redirect(reqwest::redirect::Policy::limited(5));
 
     if let Some(proxy) = proxy_url() {

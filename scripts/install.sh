@@ -190,47 +190,21 @@ if [ "${DUCK_SKIP_FETCH_LATEST:-0}" = "1" ] || [ "${DUCK_SKIP_FETCH_LATEST:-0}" 
     say "DUCK_SKIP_FETCH_LATEST is set: reusing the cached bootstrap updaterd instead of fetching the latest release"
 fi
 
-curl_proxy_args() {
+# curl through DUCK_PROXY when one is set.
+duck_curl() {
     if [ -n "${DUCK_PROXY:-}" ]; then
-        printf -- '--proxy %s' "${DUCK_PROXY}"
+        curl --proxy "$DUCK_PROXY" "$@"
+    else
+        curl "$@"
     fi
 }
 
-# fetch() {
-#     # $1 url, $2 destination
-#     if [ -n "$TOKEN" ]; then
-#         curl -fsSL -H "Authorization: Bearer ${TOKEN}" -o "$2" "$1"
-#     else
-#         curl -fsSL -o "$2" "$1"
-#     fi
-# }
-
-# fetch() {
-#     # $1 url, $2 destination
-#     proxy_args="$(curl_proxy_args)"
-#     if [ -n "$TOKEN" ]; then
-#         curl -fsSL -H "Authorization: Bearer ${TOKEN}" -o "$2" "$1"
-#         # shellcheck disable=SC2086 # intentionally unquoted so proxy args expand correctly.
-#         curl -fsSL ${proxy_args} -H "Authorization: Bearer ${TOKEN}" -o "$2" "$1"
-#     else
-#         curl -fsSL -o "$2" "$1"
-#         # shellcheck disable=SC2086 # intentionally unquoted so proxy args expand correctly.
-#         curl -fsSL ${proxy_args} -o "$2" "$1"
-#     fi
-# }
-
-fetch_asset() {
+fetch() {
     # $1 url, $2 destination
-    proxy_args="$(curl_proxy_args)"
     if [ -n "$TOKEN" ]; then
-        curl -fsSL -H "Authorization: Bearer ${TOKEN}" \
-        # shellcheck disable=SC2086 # intentionally unquoted so proxy args expand correctly.
-        curl -fsSL ${proxy_args} -H "Authorization: Bearer ${TOKEN}" \
-            -H "Accept: application/octet-stream" -o "$2" "$1"
+        duck_curl -fsSL -H "Authorization: Bearer ${TOKEN}" -o "$2" "$1"
     else
-        curl -fsSL -H "Accept: application/octet-stream" -o "$2" "$1"
-        # shellcheck disable=SC2086 # intentionally unquoted so proxy args expand correctly.
-        curl -fsSL ${proxy_args} -H "Accept: application/octet-stream" -o "$2" "$1"
+        duck_curl -fsSL -o "$2" "$1"
     fi
 }
 
@@ -241,10 +215,10 @@ fetch_asset() {
 fetch_asset() {
     # $1 url, $2 destination
     if [ -n "$TOKEN" ]; then
-        curl -fsSL -H "Authorization: Bearer ${TOKEN}" \
+        duck_curl -fsSL -H "Authorization: Bearer ${TOKEN}" \
             -H "Accept: application/octet-stream" -o "$2" "$1"
     else
-        curl -fsSL -H "Accept: application/octet-stream" -o "$2" "$1"
+        duck_curl -fsSL -H "Accept: application/octet-stream" -o "$2" "$1"
     fi
 }
 
